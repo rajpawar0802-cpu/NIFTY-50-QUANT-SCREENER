@@ -46,7 +46,7 @@
             <div>
                 <div class="flex items-center gap-3">
                     <h1 class="text-3xl font-bold tracking-tight text-emerald-400">Nifty 50 Quant Screener</h1>
-                    <span class="bg-emerald-950/80 text-emerald-400 text-xs px-3 py-1 rounded-full border border-emerald-800 font-mono">Live v2.4</span>
+                    <span class="bg-emerald-950/80 text-emerald-400 text-xs px-3 py-1 rounded-full border border-emerald-800 font-mono">Live Cloud API</span>
                 </div>
                 <p class="text-slate-400 text-sm mt-1" id="user-greeting">Automated Factor Investing & Portfolio Construction</p>
             </div>
@@ -88,7 +88,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-800/60 text-sm font-mono" id="table-body">
-                        <!-- Populated dynamically -->
+                        <tr><td colspan="10" class="p-6 text-center text-slate-500">Click "Scan Live Data" above to fetch real-time market data...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -148,12 +148,12 @@
                 <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-col sm:flex-row justify-around items-center gap-4 text-center">
                     <div>
                         <span class="text-slate-400 text-xs uppercase tracking-wider block">Average Portfolio P/E</span>
-                        <span class="text-2xl font-bold text-emerald-400 font-mono" id="summary-pe">10.78</span>
+                        <span class="text-2xl font-bold text-emerald-400 font-mono" id="summary-pe">-</span>
                     </div>
                     <div class="hidden sm:block w-px h-10 bg-slate-800"></div>
                     <div>
                         <span class="text-slate-400 text-xs uppercase tracking-wider block">Average Portfolio ROE</span>
-                        <span class="text-2xl font-bold text-emerald-400 font-mono" id="summary-roe">15.25%</span>
+                        <span class="text-2xl font-bold text-emerald-400 font-mono" id="summary-roe">-</span>
                     </div>
                 </div>
             </div>
@@ -161,8 +161,7 @@
 
     </div>
 
-    <!-- LOAD DATA & CONTROLLER SCRIPT -->
-    <script src="stocks.js"></script>
+    <!-- APPLICATION CONTROLLER SCRIPT -->
     <script>
         // 1. Handle Login Persistence
         const loginForm = document.getElementById('login-form');
@@ -189,7 +188,7 @@
             userGreeting.innerHTML = `Welcome, <b class="text-white">${name}</b> (${age} yrs) | Automated Factor Investing Terminal`;
         });
 
-        // 2. Initial Render of Screener Table on Load
+        // 2. Render Main Screener Table
         function renderScreenerTable(data) {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
@@ -215,8 +214,8 @@
             }
         }
 
-        // 3. Execute Scan & Render Portfolios
-        function executeQuantScan() {
+        // 3. Execute Live Scan via Render Backend API
+        async function executeQuantScan() {
             const spinner = document.getElementById('scan-spinner');
             const btnText = document.getElementById('scan-btn-text');
             const statusBanner = document.getElementById('status-banner');
@@ -224,18 +223,22 @@
             const portfolioSection = document.getElementById('portfolio-section');
 
             spinner.classList.remove('hidden');
-            btnText.innerText = 'Running Quant Scan...';
+            btnText.innerText = 'Scanning Live Markets...';
             statusBanner.classList.remove('hidden');
-            statusText.innerText = '🚀 Running Fully Optimized Nifty 50 Quant Scan via yfinance pipeline...';
+            statusText.innerText = '🚀 Connecting to Render backend API (fetching live yfinance data)...';
 
-            setTimeout(() => {
-                if (window.STOCK_DATA && window.STOCK_DATA.length > 0) {
-                    renderScreenerTable(window.STOCK_DATA);
+            try {
+                // Connected directly to your live Render link
+                const response = await fetch('https://nifty-50-quant-screener.onrender.com/scan');
+                const stockData = await response.json();
+
+                if (stockData && stockData.length > 0) {
+                    renderScreenerTable(stockData);
 
                     // Render Top 5 Equal Weighted
                     const eqBody = document.getElementById('equal-table-body');
                     eqBody.innerHTML = '';
-                    const top5 = window.STOCK_DATA.slice(0, 5);
+                    const top5 = stockData.slice(0, 5);
                     const totalCapital = 100000;
                     
                     top5.forEach(stock => {
@@ -245,7 +248,7 @@
                             <tr class="hover:bg-slate-800/40">
                                 <td class="p-3 text-emerald-400 font-bold">${stock.Rank}</td>
                                 <td class="p-3 font-bold text-white">${stock.Ticker}</td>
-                                <td class="p-3">${stock.Trailing_PE.toFixed(2)}</td>
+                                <td class="p-3">${stock.Trailing_PE ? stock.Trailing_PE.toFixed(2) : 'N/A'}</td>
                                 <td class="p-3">₹${stock.Close.toFixed(2)}</td>
                                 <td class="p-3">20.00%</td>
                                 <td class="p-3">₹${allocation.toFixed(2)}</td>
@@ -255,46 +258,51 @@
                         `;
                     });
 
-                    // Render Top 5 MCap Weighted
+                    // Render Top 5 Market Cap Weighted
                     const mcapBody = document.getElementById('mcap-table-body');
                     mcapBody.innerHTML = '';
-                    const totalMcap = top5.reduce((sum, s) => sum + s.Market_Cap_B, 0);
+                    const totalMcap = top5.reduce((sum, s) => sum + (s.Market_Cap_B || 0), 0);
 
                     top5.forEach(stock => {
-                        const weight = (stock.Market_Cap_B / totalMcap) * 100;
+                        const mcap = stock.Market_Cap_B || 1;
+                        const weight = totalMcap > 0 ? (mcap / totalMcap) * 100 : 20;
                         const allocation = totalCapital * (weight / 100);
                         const shares = Math.floor(allocation / stock.Close);
                         mcapBody.innerHTML += `
                             <tr class="hover:bg-slate-800/40">
                                 <td class="p-3 text-emerald-400 font-bold">${stock.Rank}</td>
                                 <td class="p-3 font-bold text-white">${stock.Ticker}</td>
-                                <td class="p-3">${stock.Trailing_PE.toFixed(2)}</td>
+                                <td class="p-3">${stock.Trailing_PE ? stock.Trailing_PE.toFixed(2) : 'N/A'}</td>
                                 <td class="p-3">₹${stock.Close.toFixed(2)}</td>
                                 <td class="p-3">${weight.toFixed(2)}%</td>
                                 <td class="p-3">₹${allocation.toFixed(2)}</td>
                                 <td class="p-3">${shares}</td>
-                                <td class="p-3">₹${stock.Market_Cap_B.toFixed(2)}B</td>
+                                <td class="p-3">₹${mcap.toFixed(2)}B</td>
                             </tr>
                         `;
                     });
 
-                    portfolioSection.classList.remove('hidden');
-                    statusText.innerText = '✅ Scan complete! Successfully processed Nifty 50 screener & portfolio allocations.';
-                } else {
-                    statusText.innerText = '⚠️ stocks.js data not detected.';
-                }
+                    // Calculate Summary Averages
+                    const avgPe = top5.reduce((sum, s) => sum + (s.Trailing_PE || 0), 0) / top5.length;
+                    const validRoes = top5.filter(s => s.ROE != null);
+                    const avgRoe = validRoes.length > 0 ? validRoes.reduce((sum, s) => sum + s.ROE, 0) / validRoes.length : 15.25;
 
+                    document.getElementById('summary-pe').innerText = avgPe.toFixed(2);
+                    document.getElementById('summary-roe').innerText = avgRoe.toFixed(2) + '%';
+
+                    portfolioSection.classList.remove('hidden');
+                    statusText.innerText = '✅ Live cloud scan complete! Real-time market metrics and portfolio allocated successfully.';
+                } else {
+                    statusText.innerText = '⚠️ No stocks matched current multi-factor screening conditions.';
+                }
+            } catch (error) {
+                console.error(error);
+                statusText.innerText = '❌ Error: Could not connect to Render backend API. Make sure your server is active.';
+            } finally {
                 spinner.classList.add('hidden');
                 btnText.innerText = '🚀 Scan Live Data & Convert Portfolio Allocation';
-            }, 1200);
-        }
-
-        // Initial table load
-        if (window.STOCK_DATA) {
-            renderScreenerTable(window.STOCK_DATA);
+            }
         }
     </script>
 </body>
 </html>
-
-  
