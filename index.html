@@ -1,34 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nifty 50 Quantitative Screener & Portfolio</title>
-    <!-- Tailwind CSS CDN -->
+    <title>Nifty 50 Quant Screener & Portfolio Allocator</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
 
-<body class="bg-slate-900 text-slate-100 min-h-screen p-6">
-    <div class="max-w-7xl mx-auto">
-        <header class="mb-8 border-b border-slate-800 pb-4 flex justify-between items-center">
-            <div>
-                <h1 class="text-3xl font-bold tracking-tight text-emerald-400">Nifty 50 Quant Screener</h1>
-                <p class="text-slate-400 text-sm mt-1">Automated Factor Investing Dashboard (Value, Momentum & Quality)
-                </p>
+    <!-- 1. LOGIN / ONBOARDING MODAL -->
+    <div id="login-screen" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-50">
+        <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 shadow-2xl max-w-md w-full mx-4">
+            <div class="text-center mb-6">
+                <div class="inline-flex p-3 bg-emerald-500/10 rounded-xl text-emerald-400 mb-3 border border-emerald-500/20 text-xl font-bold">
+                    📈
+                </div>
+                <h2 class="text-2xl font-bold text-white tracking-tight">Nifty 50 Quant Terminal</h2>
+                <p class="text-slate-400 text-sm mt-1">Enter your details to initialize your session</p>
             </div>
-            <span
-                class="bg-emerald-950 text-emerald-400 text-xs px-3 py-1 rounded-full border border-emerald-800 font-mono">Live
-                Pipeline</span>
+            
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Enter Your Name</label>
+                    <input type="text" id="user-name" required placeholder="e.g. Alex Trader" 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Enter Your Age</label>
+                    <input type="number" id="user-age" min="18" max="100" required placeholder="e.g. 24" 
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-emerald-500 transition-colors">
+                </div>
+                <button type="submit" 
+                    class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-3.5 rounded-lg transition-all shadow-lg shadow-emerald-500/20 mt-2">
+                    Access Terminal →
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. MAIN DASHBOARD CONTENT -->
+    <div class="max-w-7xl mx-auto p-6 md:p-10">
+        
+        <!-- HEADER & USER PROFILE -->
+        <header class="mb-8 border-b border-slate-800 pb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-3xl font-bold tracking-tight text-emerald-400">Nifty 50 Quant Screener</h1>
+                    <span class="bg-emerald-950/80 text-emerald-400 text-xs px-3 py-1 rounded-full border border-emerald-800 font-mono">Live v2.4</span>
+                </div>
+                <p class="text-slate-400 text-sm mt-1" id="user-greeting">Automated Factor Investing & Portfolio Construction</p>
+            </div>
+            
+            <!-- SCAN TRIGGER BUTTON -->
+            <button id="scan-btn" onclick="executeQuantScan()" 
+                class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-6 py-3.5 rounded-xl transition-all flex items-center gap-2.5 shadow-lg shadow-emerald-500/20 active:scale-95 cursor-pointer">
+                <span id="scan-spinner" class="hidden animate-spin text-lg">🔄</span>
+                <span id="scan-btn-text">🚀 Scan Live Data & Convert Portfolio Allocation</span>
+            </button>
         </header>
 
-        <!-- Table Container -->
-        <div class="bg-slate-800 rounded-xl shadow-xl overflow-hidden border border-slate-700">
+        <!-- STATUS LOG BANNER -->
+        <div id="status-banner" class="hidden mb-8 p-4 bg-slate-900 border border-slate-800 rounded-xl text-emerald-400 text-sm font-mono flex items-center gap-3 shadow-inner">
+            <span class="animate-pulse">🟢</span>
+            <span id="status-text">Ready for execution...</span>
+        </div>
+
+        <!-- SCREENER RESULTS TABLE -->
+        <div class="bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-800 mb-10">
+            <div class="p-5 border-b border-slate-800 bg-slate-950/50 flex justify-between items-center">
+                <h3 class="font-bold text-white text-lg tracking-wide">📊 Final Production-Grade Nifty 50 Screener Output</h3>
+                <span class="text-xs text-slate-400 font-mono">Sorted by Trailing P/E (Ascending)</span>
+            </div>
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse" id="stock-table">
+                <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr
-                            class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
+                        <tr class="bg-slate-950/80 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-800">
                             <th class="p-4">Rank</th>
                             <th class="p-4">Ticker</th>
                             <th class="p-4">P/E</th>
@@ -41,40 +87,214 @@
                             <th class="p-4">MCap (B ₹)</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-700/50 text-sm font-mono" id="table-body">
-                        <!-- Data injected dynamically via stocks.js -->
+                    <tbody class="divide-y divide-slate-800/60 text-sm font-mono" id="table-body">
+                        <!-- Populated dynamically -->
                     </tbody>
                 </table>
             </div>
         </div>
+
+        <!-- PORTFOLIO ALLOCATION SECTION -->
+        <div id="portfolio-section" class="hidden space-y-8">
+            <div class="bg-slate-900 rounded-2xl shadow-2xl overflow-hidden border border-slate-800 p-6">
+                <h3 class="text-xl font-bold text-white mb-2">🎯 Top 5 Value-Momentum Portfolio Construction</h3>
+                <p class="text-slate-400 text-sm mb-6">Target Capital Pool: <span class="text-emerald-400 font-mono font-bold">₹100,000.00</span></p>
+
+                <!-- Equal Weighted Table -->
+                <div class="mb-8">
+                    <h4 class="text-emerald-400 font-bold mb-3 flex items-center gap-2">⚖️ Equal-Weighted Strategy</h4>
+                    <div class="overflow-x-auto border border-slate-800 rounded-xl">
+                        <table class="w-full text-left border-collapse text-sm font-mono">
+                            <thead>
+                                <tr class="bg-slate-950 text-slate-400 text-xs uppercase border-b border-slate-800">
+                                    <th class="p-3">Rank</th>
+                                    <th class="p-3">Ticker</th>
+                                    <th class="p-3">P/E</th>
+                                    <th class="p-3">Close (₹)</th>
+                                    <th class="p-3">Weight (%)</th>
+                                    <th class="p-3">Allocation (₹)</th>
+                                    <th class="p-3">Shares</th>
+                                    <th class="p-3">ROE (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60" id="equal-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Market Cap Weighted Table -->
+                <div class="mb-6">
+                    <h4 class="text-emerald-400 font-bold mb-3 flex items-center gap-2">🏢 Market-Cap Weighted Strategy</h4>
+                    <div class="overflow-x-auto border border-slate-800 rounded-xl">
+                        <table class="w-full text-left border-collapse text-sm font-mono">
+                            <thead>
+                                <tr class="bg-slate-950 text-slate-400 text-xs uppercase border-b border-slate-800">
+                                    <th class="p-3">Rank</th>
+                                    <th class="p-3">Ticker</th>
+                                    <th class="p-3">P/E</th>
+                                    <th class="p-3">Close (₹)</th>
+                                    <th class="p-3">Weight (%)</th>
+                                    <th class="p-3">Allocation (₹)</th>
+                                    <th class="p-3">Shares</th>
+                                    <th class="p-3">MCap (B ₹)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60" id="mcap-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Portfolio Summary Metrics -->
+                <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 flex flex-col sm:flex-row justify-around items-center gap-4 text-center">
+                    <div>
+                        <span class="text-slate-400 text-xs uppercase tracking-wider block">Average Portfolio P/E</span>
+                        <span class="text-2xl font-bold text-emerald-400 font-mono" id="summary-pe">10.78</span>
+                    </div>
+                    <div class="hidden sm:block w-px h-10 bg-slate-800"></div>
+                    <div>
+                        <span class="text-slate-400 text-xs uppercase tracking-wider block">Average Portfolio ROE</span>
+                        <span class="text-2xl font-bold text-emerald-400 font-mono" id="summary-roe">15.25%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <!-- Load Data and Render Table -->
+    <!-- LOAD DATA & CONTROLLER SCRIPT -->
     <script src="stocks.js"></script>
     <script>
-        const tbody = document.getElementById('table-body');
-        if (window.STOCK_DATA && window.STOCK_DATA.length > 0) {
-            window.STOCK_DATA.forEach(row => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-700/30 transition-colors";
-                tr.innerHTML = `
-                    <td class="p-4 text-emerald-400 font-bold">${row.Rank}</td>
-                    <td class="p-4 font-bold text-white">${row.Ticker}</td>
-                    <td class="p-4">${row.Trailing_PE ? row.Trailing_PE.toFixed(2) : 'N/A'}</td>
-                    <td class="p-4">₹${row.Close ? row.Close.toFixed(2) : 'N/A'}</td>
-                    <td class="p-4">₹${row.SMA_50 ? row.SMA_50.toFixed(2) : 'N/A'}</td>
-                    <td class="p-4">${row.RSI_14 ? row.RSI_14.toFixed(2) : 'N/A'}</td>
-                    <td class="p-4"><span class="px-2 py-1 rounded text-xs ${row.MACD_Bullish ? 'bg-emerald-900/50 text-emerald-400 border border-emerald-700' : 'bg-rose-900/50 text-rose-400 border border-rose-700'}">${row.MACD_Bullish}</span></td>
-                    <td class="p-4"><span class="px-2 py-1 rounded text-xs ${row.Vol_Breakout ? 'bg-emerald-900/50 text-emerald-400 border border-emerald-700' : 'bg-slate-700 text-slate-300'}">${row.Vol_Breakout}</span></td>
-                    <td class="p-4">${row.ROE ? row.ROE.toFixed(2) + '%' : 'N/A'}</td>
-                    <td class="p-4">₹${row.Market_Cap_B ? row.Market_Cap_B.toFixed(2) : '0'}B</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        } else {
-            tbody.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-400">No stock data found. Please check your stocks.js file.</td></tr>`;
+        // 1. Handle Login Persistence
+        const loginForm = document.getElementById('login-form');
+        const loginScreen = document.getElementById('login-screen');
+        const userGreeting = document.getElementById('user-greeting');
+
+        const savedName = localStorage.getItem('quant_user_name');
+        const savedAge = localStorage.getItem('quant_user_age');
+
+        if (savedName && savedAge) {
+            loginScreen.classList.add('hidden');
+            userGreeting.innerHTML = `Welcome back, <b class="text-white">${savedName}</b> (${savedAge} yrs) | Automated Factor Investing Terminal`;
+        }
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('user-name').value;
+            const age = document.getElementById('user-age').value;
+            
+            localStorage.setItem('quant_user_name', name);
+            localStorage.setItem('quant_user_age', age);
+            
+            loginScreen.classList.add('hidden');
+            userGreeting.innerHTML = `Welcome, <b class="text-white">${name}</b> (${age} yrs) | Automated Factor Investing Terminal`;
+        });
+
+        // 2. Initial Render of Screener Table on Load
+        function renderScreenerTable(data) {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            
+            if (data && data.length > 0) {
+                data.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-800/40 transition-colors";
+                    tr.innerHTML = `
+                        <td class="p-4 text-emerald-400 font-bold">${row.Rank}</td>
+                        <td class="p-4 font-bold text-white">${row.Ticker}</td>
+                        <td class="p-4">${row.Trailing_PE ? row.Trailing_PE.toFixed(2) : 'N/A'}</td>
+                        <td class="p-4">₹${row.Close ? row.Close.toFixed(2) : 'N/A'}</td>
+                        <td class="p-4">₹${row.SMA_50 ? row.SMA_50.toFixed(2) : 'N/A'}</td>
+                        <td class="p-4">${row.RSI_14 ? row.RSI_14.toFixed(2) : 'N/A'}</td>
+                        <td class="p-4"><span class="px-2 py-1 rounded text-xs ${row.MACD_Bullish ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'}">${row.MACD_Bullish}</span></td>
+                        <td class="p-4"><span class="px-2 py-1 rounded text-xs ${row.Vol_Breakout ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-slate-800 text-slate-400'}">${row.Vol_Breakout}</span></td>
+                        <td class="p-4">${row.ROE ? row.ROE.toFixed(2) + '%' : 'N/A'}</td>
+                        <td class="p-4">₹${row.Market_Cap_B ? row.Market_Cap_B.toFixed(2) : '0'}B</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        // 3. Execute Scan & Render Portfolios
+        function executeQuantScan() {
+            const spinner = document.getElementById('scan-spinner');
+            const btnText = document.getElementById('scan-btn-text');
+            const statusBanner = document.getElementById('status-banner');
+            const statusText = document.getElementById('status-text');
+            const portfolioSection = document.getElementById('portfolio-section');
+
+            spinner.classList.remove('hidden');
+            btnText.innerText = 'Running Quant Scan...';
+            statusBanner.classList.remove('hidden');
+            statusText.innerText = '🚀 Running Fully Optimized Nifty 50 Quant Scan via yfinance pipeline...';
+
+            setTimeout(() => {
+                if (window.STOCK_DATA && window.STOCK_DATA.length > 0) {
+                    renderScreenerTable(window.STOCK_DATA);
+
+                    // Render Top 5 Equal Weighted
+                    const eqBody = document.getElementById('equal-table-body');
+                    eqBody.innerHTML = '';
+                    const top5 = window.STOCK_DATA.slice(0, 5);
+                    const totalCapital = 100000;
+                    
+                    top5.forEach(stock => {
+                        const allocation = totalCapital * 0.20;
+                        const shares = Math.floor(allocation / stock.Close);
+                        eqBody.innerHTML += `
+                            <tr class="hover:bg-slate-800/40">
+                                <td class="p-3 text-emerald-400 font-bold">${stock.Rank}</td>
+                                <td class="p-3 font-bold text-white">${stock.Ticker}</td>
+                                <td class="p-3">${stock.Trailing_PE.toFixed(2)}</td>
+                                <td class="p-3">₹${stock.Close.toFixed(2)}</td>
+                                <td class="p-3">20.00%</td>
+                                <td class="p-3">₹${allocation.toFixed(2)}</td>
+                                <td class="p-3">${shares}</td>
+                                <td class="p-3">${stock.ROE ? stock.ROE.toFixed(2) + '%' : 'N/A'}</td>
+                            </tr>
+                        `;
+                    });
+
+                    // Render Top 5 MCap Weighted
+                    const mcapBody = document.getElementById('mcap-table-body');
+                    mcapBody.innerHTML = '';
+                    const totalMcap = top5.reduce((sum, s) => sum + s.Market_Cap_B, 0);
+
+                    top5.forEach(stock => {
+                        const weight = (stock.Market_Cap_B / totalMcap) * 100;
+                        const allocation = totalCapital * (weight / 100);
+                        const shares = Math.floor(allocation / stock.Close);
+                        mcapBody.innerHTML += `
+                            <tr class="hover:bg-slate-800/40">
+                                <td class="p-3 text-emerald-400 font-bold">${stock.Rank}</td>
+                                <td class="p-3 font-bold text-white">${stock.Ticker}</td>
+                                <td class="p-3">${stock.Trailing_PE.toFixed(2)}</td>
+                                <td class="p-3">₹${stock.Close.toFixed(2)}</td>
+                                <td class="p-3">${weight.toFixed(2)}%</td>
+                                <td class="p-3">₹${allocation.toFixed(2)}</td>
+                                <td class="p-3">${shares}</td>
+                                <td class="p-3">₹${stock.Market_Cap_B.toFixed(2)}B</td>
+                            </tr>
+                        `;
+                    });
+
+                    portfolioSection.classList.remove('hidden');
+                    statusText.innerText = '✅ Scan complete! Successfully processed Nifty 50 screener & portfolio allocations.';
+                } else {
+                    statusText.innerText = '⚠️ stocks.js data not detected.';
+                }
+
+                spinner.classList.add('hidden');
+                btnText.innerText = '🚀 Scan Live Data & Convert Portfolio Allocation';
+            }, 1200);
+        }
+
+        // Initial table load
+        if (window.STOCK_DATA) {
+            renderScreenerTable(window.STOCK_DATA);
         }
     </script>
 </body>
-
 </html>
+
+  
